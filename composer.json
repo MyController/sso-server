@@ -1,5 +1,5 @@
 {
-    "name": "MyController/sso-4-larave",
+    "name": "mycontroller/sso",
     "description": "Simple Single Sign-On for Laravel, Based on jasny/sso",
     "keywords": ["sso", "laravel"],
     "require": {
@@ -9,12 +9,12 @@
     },
     "autoload": {
         "psr-4": {
-            "MyController\\SSO-4-Laravel\\": "src/"
+            "MyController\\SSO\\": "src/"
         }
     },
     "support": {
-        "issues": "https://github.com/mycontroller/sso-4-laravel/issues",
-        "source": "https://github.com/mycontroller/sso-4-laravel"
+        "issues": "https://github.com/mycontroller/sso/issues",
+        "source": "https://github.com/mycontroller/sso"
     },
     "license": "MIT",
     "minimum-stability" : "dev",

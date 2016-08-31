@@ -1,4 +1,4 @@
-# sso-4-laravel
+# sso
 
 Simple Single Sign-On for Laravel / Lumen， 基于 [jasny/sso](https://github.com/jasny/sso)
 
