@@ -10,14 +10,14 @@ class ServerController extends BaseController
 {
     public function index(Request $request)
     {
-        $ssoServer = new SSOServer();
+        $SSOServerInstance = SSOServer::getInstance();
         $command = $request->get('command');
 
-        if (!$command || !method_exists($ssoServer, $command)) {
+        if (!$command || !method_exists($SSOServerInstance, $command)) {
             return response()->json(['error' => 'Unknown command'])->setStatusCode(404);
         }
 
-        $result = $ssoServer->$command();
+        $result = $SSOServerInstance->$command();
         return $result;
     }
 }

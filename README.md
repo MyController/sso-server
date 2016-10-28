@@ -67,12 +67,12 @@ Simple SSO Server for Lumen， 基于 [jasny/sso](https://github.com/jasny/sso)
 在 `/app/Http/routes.php` 文件里添加路由:
 
   ```shell
-    $app->get('/sso-server', function () use ($app) {
+    $app->get('/sso', function () use ($app) {
     
         $command = isset($_REQUEST['command']) ? $_REQUEST['command'] : null;
         $result = SSOServer::$command();
     });
-    $app->post('/sso-server', function () use ($app) {
+    $app->post('/sso', function () use ($app) {
     
         $command = isset($_REQUEST['command']) ? $_REQUEST['command'] : null;
         $result = SSOServer::$command();

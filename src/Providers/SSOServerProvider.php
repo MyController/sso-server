@@ -30,7 +30,8 @@ class SSOServerProvider extends ServiceProvider
         $this->publishes([$configPath => $publishPath], 'config');
 
 //        // HTTP routing
-//        $this->app->get(config('sso-server.routeUrl', 'sso-server'), '\MyController\SSOServer\Http\Controllers\ServerController@index');
+//        $this->app->get(config('sso-server.url', '/sso'), 'MyController\SSOServer\Http\Controllers\ServerController@index');
+//        $this->app->post(config('sso-server.url', '/sso'), 'MyController\SSOServer\Http\Controllers\ServerController@index');
     }
 
     /**
