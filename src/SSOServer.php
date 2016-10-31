@@ -43,8 +43,6 @@ class SSOServer extends Server
             'fail_exception' => true,
         ];
 
-        // 使用缓存把 SSOBroker的sso_session 与 SSOServer的linkedId 进行关联,
-        // ( 所谓 SSOServer的linkedId , 就是 访问SSOServer的UA 被SSOServer分配的 sessionId )
         $this->cache = $this->createCacheAdapter();
 
         $this->app = $app;
@@ -95,16 +93,37 @@ class SSOServer extends Server
             return $this->fail("The broker session id isn't attached to a user session", 403);
         }
 
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            if ($linkedId !== session_id()) throw new \Exception("Session has already started", 400);
-            return;
-        }
-
-        session_id($linkedId);
-        session_start();
+        session()->setId($linkedId);
 
         $this->brokerId = $this->validateBrokerSessionId($sid);
     }
+
+
+
+    /**
+     * Start the session when a user visits the SSO server
+     * @override
+     */
+    protected function startUserSession()
+    {
+        // 使用 Lumen的SESSION方案 代替 PHP的原生SESSION方案, 这样才能支持分布式运行
+        /**
+         |----------------------------------------------------------------------
+         |   启用 Lumen的SESSION 需要在 `/bootstrap/app.php` 里开启
+         |
+         |   $app->middleware([
+         |       Illuminate\Cookie\Middleware\EncryptCookies::class,
+         |       Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+         |       Illuminate\Session\Middleware\StartSession::class,
+         |     //Illuminate\View\Middleware\ShareErrorsFromSession::class,
+         |     //Laravel\Lumen\Http\Middleware\VerifyCsrfToken::class,
+         |   ]);
+         |----------------------------------------------------------------------
+         |
+         */
+    }
+
+
 
     /**
      * Attach a user session to a broker session
@@ -131,6 +150,38 @@ class SSOServer extends Server
 
         $this->cache->put($sid, $this->getSessionData('id'), $this->cacheLifeTime);
         $this->outputAttachSuccess();
+    }
+
+
+
+
+    /**
+     * Set session data
+     *
+     * @param string $key
+     * @param string $value
+     */
+    protected function setSessionData($key, $value)
+    {
+        if (!isset($value)) {
+            session()->forget($key);
+            return;
+        }
+
+        session([$key => $value]);
+    }
+
+    /**
+     * Get session data
+     *
+     * @param type $key
+     * @return null|string
+     */
+    protected function getSessionData($key)
+    {
+        if ($key === 'id') return session()->getId();
+
+        return session($key, null);
     }
 
 
