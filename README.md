@@ -12,6 +12,12 @@ Simple SSO Server for Lumen， 基于 [jasny/sso](https://github.com/jasny/sso)
 
 ## 配置
 
+> 前提: 
+>  1. 确保 Lumen 框架的 Cache 系统 已经正确配置完毕.
+>  2. 确保 Lumen 框架的 Session 系统 已经正确配置完毕.
+>  
+
+
 在 `/bootstrap/app.php` 文件中的 `Register Service Providers` 配置段落里添加配置:
 
   ```shell
@@ -67,16 +73,28 @@ Simple SSO Server for Lumen， 基于 [jasny/sso](https://github.com/jasny/sso)
 在 `/app/Http/routes.php` 文件里添加路由:
 
   ```shell
-    $app->get('/sso', function () use ($app) {
-    
+  
+  $app->get('/sso', function () use ($app) {
+        $SSOServerInstance = SSOServer::getInstance();
         $command = isset($_REQUEST['command']) ? $_REQUEST['command'] : null;
-        $result = SSOServer::$command();
-    });
-    $app->post('/sso', function () use ($app) {
     
+        if (!$command || !method_exists($SSOServerInstance, $command)) {
+            return response()->json(['error' => 'Unknown command'])->setStatusCode(404);
+        }
+    
+        $result = $SSOServerInstance->$command();
+  });
+  
+  $app->post('/sso', function () use ($app) {
+        $SSOServerInstance = SSOServer::getInstance();
         $command = isset($_REQUEST['command']) ? $_REQUEST['command'] : null;
-        $result = SSOServer::$command();
-    });
+    
+        if (!$command || !method_exists($SSOServerInstance, $command)) {
+            return response()->json(['error' => 'Unknown command'])->setStatusCode(404);
+        }
+    
+        $result = $SSOServerInstance->$command();
+  });
   ```
   
 ## License

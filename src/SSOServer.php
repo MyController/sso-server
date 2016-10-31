@@ -43,9 +43,9 @@ class SSOServer extends Server
             'fail_exception' => true,
         ];
 
-        $this->cache = $this->createCacheAdapter();
-
         $this->app = $app;
+
+        $this->cache = $this->createCacheAdapter();
     }
 
     /**
