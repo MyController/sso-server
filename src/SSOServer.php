@@ -30,6 +30,13 @@ class SSOServer extends Server
     protected $cacheLifeTime = 600;
 
     /**
+     * 通过 SSOBroker的sso_session 从缓存获取到其关联的 linkedId, linkedId 是某个UA的 session_id
+     *
+     * @var string
+     */
+    protected $linkedId = '';
+
+    /**
      * SSOServer constructor.
      *
      * @override
@@ -93,7 +100,7 @@ class SSOServer extends Server
             return $this->fail("The broker session id isn't attached to a user session", 403);
         }
 
-        session()->setId($linkedId);
+        $this->linkedId = $linkedId;
 
         $this->brokerId = $this->validateBrokerSessionId($sid);
     }
@@ -148,7 +155,7 @@ class SSOServer extends Server
         $this->startUserSession();
         $sid = $this->generateSessionId($_REQUEST['broker'], $_REQUEST['token']);
 
-        $this->cache->put($sid, $this->getSessionData('id'), $this->cacheLifeTime);
+        $this->cache->put($sid, session()->getId(), $this->cacheLifeTime);
         $this->outputAttachSuccess();
     }
 
@@ -163,12 +170,14 @@ class SSOServer extends Server
      */
     protected function setSessionData($key, $value)
     {
+        $key = $this->linkedId . '-' . $key;
+
         if (!isset($value)) {
-            session()->forget($key);
+            $this->cache->forget($key);
             return;
         }
 
-        session([$key => $value]);
+        $this->cache->put($key, $value, $this->cacheLifeTime);
     }
 
     /**
@@ -179,9 +188,9 @@ class SSOServer extends Server
      */
     protected function getSessionData($key)
     {
-        if ($key === 'id') return session()->getId();
+        $key = $this->linkedId . '-' . $key;
 
-        return session($key, null);
+        return $this->cache->get($key, null);
     }
 
 
