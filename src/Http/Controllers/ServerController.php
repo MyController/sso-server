@@ -4,13 +4,12 @@ namespace MyController\SSOServer\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
-use MyController\SSOServer\SSOServer;
 
 class ServerController extends BaseController
 {
     public function index(Request $request)
     {
-        $SSOServerInstance = SSOServer::getInstance();
+        $SSOServerInstance = app('MyController\SSOServer\Providers\SSOServer')->getInstance();
         $command = $request->get('command');
 
         if (!$command || !method_exists($SSOServerInstance, $command)) {

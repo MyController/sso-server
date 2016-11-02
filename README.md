@@ -21,22 +21,17 @@ Simple SSO Server for Lumen， 基于 [jasny/sso](https://github.com/jasny/sso)
 在 `/bootstrap/app.php` 文件中的 `Register Service Providers` 配置段落里添加配置:
 
   ```shell
-  $app->register(MyController\SSOServer\Providers\SSOServerProvider::class);
+  $app->register(\MyController\SSOServer\Providers\SSOServerProvider::class);
   ```
 
-在 `/bootstrap/app.php` 文件中找到 `$app->withFacades();`，确保 `$app->withFacades();` 被开启, 在它后面添加Facade定义:
+如果需要, 你可以为本插件添加Facade定义, 在 `/bootstrap/app.php` 文件中找到 `$app->withFacades();`，确保 `$app->withFacades();` 被开启, 在它后面:
 
   ```shell
   $app->withFacades();
-  class_alias(MyController\SSOServer\Facades\SSOServerFacade::class, 'SSOServer');
+  class_alias(\MyController\SSOServer\Facades\SSOServerFacade::class, 'SSOServer');
   ```
 
-将配置文件 `/vendor/mycontroller/sso-server/config/sso-server.php` 复制为 `/config/sso-server.php` ,
-并在 `/bootstrap/app.php` 文件中加载 `sso-server` 配置:
-
-  ```shell
-  $app->configure('sso-server');
-  ```
+将配置文件 `/vendor/mycontroller/sso-server/config/sso-server.php` 复制为 `/config/sso-server.php` , 插件会自发加载 `sso-server` 配置.
   
 ## 实现 UserAuthContract 接口
 
@@ -61,8 +56,8 @@ Simple SSO Server for Lumen， 基于 [jasny/sso](https://github.com/jasny/sso)
 
   ```shell
   $app->singleton(
-    MyController\SSOServer\Contracts\UserAuthContract::class,
-    App\MyUserAuth::class
+    \MyController\SSOServer\Contracts\UserAuthContract::class,
+    \App\MyUserAuth::class
   );
   ```
   
@@ -70,33 +65,8 @@ Simple SSO Server for Lumen， 基于 [jasny/sso](https://github.com/jasny/sso)
 
 > 需要配合 `mycontroller/sso-broker` 插件来使用, `mycontroller/sso-broker`(链接地址) 是客户端.
 
-在 `/app/Http/routes.php` 文件里添加路由:
+> 你还可以在 `/config/sso-server.php` 里自定义 SSOServer 的服务路由指向 (默认是 '/sso') , 插件会自发执行路由绑定. 
 
-  ```shell
-  
-  $app->get('/sso', function () use ($app) {
-        $SSOServerInstance = SSOServer::getInstance();
-        $command = isset($_REQUEST['command']) ? $_REQUEST['command'] : null;
-    
-        if (!$command || !method_exists($SSOServerInstance, $command)) {
-            return response()->json(['error' => 'Unknown command'])->setStatusCode(404);
-        }
-    
-        $result = $SSOServerInstance->$command();
-  });
-  
-  $app->post('/sso', function () use ($app) {
-        $SSOServerInstance = SSOServer::getInstance();
-        $command = isset($_REQUEST['command']) ? $_REQUEST['command'] : null;
-    
-        if (!$command || !method_exists($SSOServerInstance, $command)) {
-            return response()->json(['error' => 'Unknown command'])->setStatusCode(404);
-        }
-    
-        $result = $SSOServerInstance->$command();
-  });
-  ```
-  
 ## License
 
 MIT

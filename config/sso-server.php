@@ -41,7 +41,6 @@ return [
     | 这里登记了所有的客户端的 SSOBroker-Id 和 SSOBroker-Secret
     |
     */
-
     'brokers' => [
 //        'Alice' => [
 //            'secret' => '8iwzik1bwd'
