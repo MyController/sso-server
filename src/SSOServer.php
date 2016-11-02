@@ -2,7 +2,7 @@
 
 namespace MyController\SSOServer;
 
-use Jasny\ValidationResult;
+use MyController\SSOServer\ValidationResult;
 use Jasny\SSO\Server;
 use MyController\SSOServer\Exceptions\SSOServerException;
 
@@ -45,8 +45,7 @@ class SSOServer extends Server
     public function __construct($app)
     {
         $this->options = [
-            //通过参数`fail_exception`, 能控制`Jasny\SSO`发生错误时的处理方式
-            //不为空 empty() 时 抛出异常`Jasny\SSO\Exception`, 否则会设置 HTTP response 并且 exit.
+            //通过参数`fail_exception`, 能控制发生错误时的处理方式, 不为空 empty() 时 抛出异常, 否则会设置 HTTP response 并且 exit.
             'fail_exception' => true,
         ];
 
@@ -77,8 +76,6 @@ class SSOServer extends Server
         return $this->app['cache'];
     }
 
-
-
     /**
      * Start the session for broker requests to the SSO server
      *
@@ -105,7 +102,29 @@ class SSOServer extends Server
         $this->brokerId = $this->validateBrokerSessionId($sid);
     }
 
+    /**
+     * Validate the broker session id
+     *
+     * @param string $sid session id
+     * @return string  the broker id
+     */
+    protected function validateBrokerSessionId($sid)
+    {
+        $matches = null;
 
+        if (!preg_match('/^SSO-(\w*+)-(\w*+)-([a-z0-9]*+)$/', $_GET['sso_session'], $matches)) {
+            return $this->fail("Invalid session id");
+        }
+
+        $brokerId = $matches[1];
+        $token = $matches[2];
+
+        if ($this->generateSessionId($brokerId, $token) != $sid) {
+            return $this->fail("Checksum failed: Client IP address may have changed", 403);
+        }
+
+        return $brokerId;
+    }
 
     /**
      * Start the session when a user visits the SSO server
@@ -114,23 +133,70 @@ class SSOServer extends Server
     protected function startUserSession()
     {
         // 使用 Lumen的SESSION方案 代替 PHP的原生SESSION方案, 这样才能支持分布式运行
-        /**
-         |----------------------------------------------------------------------
-         |   启用 Lumen的SESSION 需要在 `/bootstrap/app.php` 里开启
-         |
-         |   $app->middleware([
-         |       Illuminate\Cookie\Middleware\EncryptCookies::class,
-         |       Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-         |       Illuminate\Session\Middleware\StartSession::class,
-         |     //Illuminate\View\Middleware\ShareErrorsFromSession::class,
-         |     //Laravel\Lumen\Http\Middleware\VerifyCsrfToken::class,
-         |   ]);
-         |----------------------------------------------------------------------
-         |
-         */
+        /*
+        |----------------------------------------------------------------------
+        |   启用 Lumen的SESSION 需要在 `/bootstrap/app.php` 里开启
+        |
+        |   $app->middleware([
+        |       Illuminate\Cookie\Middleware\EncryptCookies::class,
+        |       Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        |       Illuminate\Session\Middleware\StartSession::class,
+        |     //Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        |     //Laravel\Lumen\Http\Middleware\VerifyCsrfToken::class,
+        |   ]);
+        |----------------------------------------------------------------------
+        |
+        */
     }
 
+    /**
+     * Generate session id from session token
+     *
+     * @param string $brokerId
+     * @param string $token
+     * @return string
+     */
+    protected function generateSessionId($brokerId, $token)
+    {
+        $broker = $this->getBrokerInfo($brokerId);
 
+        if (!isset($broker)) return null;
+
+        return "SSO-{$brokerId}-{$token}-" . hash('sha256', 'session' . $token . $broker['secret']);
+    }
+
+    /**
+     * Generate session id from session token
+     *
+     * @param string $brokerId
+     * @param string $token
+     * @return string
+     */
+    protected function generateAttachChecksum($brokerId, $token)
+    {
+        $broker = $this->getBrokerInfo($brokerId);
+
+        if (!isset($broker)) return null;
+
+        return hash('sha256', 'attach' . $token . $broker['secret']);
+    }
+
+    /**
+     * Detect the type for the HTTP response.
+     * Should only be done for an `attach` request.
+     */
+    protected function detectReturnType()
+    {
+        if (!empty($_GET['return_url'])) {
+            $this->returnType = 'redirect';
+        } elseif (!empty($_GET['callback'])) {
+            $this->returnType = 'jsonp';
+        } elseif (strpos($_SERVER['HTTP_ACCEPT'], 'image/') !== false) {
+            $this->returnType = 'image';
+        } elseif (strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+            $this->returnType = 'json';
+        }
+    }
 
     /**
      * Attach a user session to a broker session
@@ -159,8 +225,93 @@ class SSOServer extends Server
         $this->outputAttachSuccess();
     }
 
+    /**
+     * Output on a successful attach
+     */
+    protected function outputAttachSuccess()
+    {
+        if ($this->returnType === 'image') {
+            $this->outputImage();
+        }
 
+        if ($this->returnType === 'json') {
+            header('Content-type: application/json; charset=UTF-8');
+            echo json_encode(['success' => 'attached']);
+        }
 
+        if ($this->returnType === 'jsonp') {
+            $data = json_encode(['success' => 'attached']);
+            echo $_REQUEST['callback'] . "($data, 200);";
+        }
+
+        if ($this->returnType === 'redirect') {
+            $url = $_REQUEST['return_url'];
+            header("Location: $url", true, 307);
+            echo "You're being redirected to <a href='{$url}'>$url</a>";
+        }
+    }
+
+    /**
+     * Output a 1x1px transparent image
+     */
+    protected function outputImage()
+    {
+        header('Content-Type: image/png');
+        echo base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQ'
+            . 'MAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZg'
+            . 'AAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=');
+    }
+
+    /**
+     * Authenticate
+     */
+    public function login()
+    {
+        $this->startBrokerSession();
+
+        if (empty($_POST['username'])) $this->fail("No username specified", 400);
+        if (empty($_POST['password'])) $this->fail("No password specified", 400);
+
+        $validation = $this->authenticate($_POST['username'], $_POST['password']);
+
+        if ($validation->failed()) {
+            return $this->fail($validation->getError(), 400);
+        }
+
+        $this->setSessionData('sso_user', $_POST['username']);
+        $this->userInfo();
+    }
+
+    /**
+     * Log out
+     */
+    public function logout()
+    {
+        $this->startBrokerSession();
+        $this->setSessionData('sso_user', null);
+
+        header('Content-type: application/json; charset=UTF-8');
+        http_response_code(204);
+    }
+
+    /**
+     * Ouput user information as json.
+     */
+    public function userInfo()
+    {
+        $this->startBrokerSession();
+        $user = null;
+
+        $username = $this->getSessionData('sso_user');
+
+        if ($username) {
+            $user = $this->getUserInfo($username);
+            if (!$user) return $this->fail("User not found", 500); // Shouldn't happen
+        }
+
+        header('Content-type: application/json; charset=UTF-8');
+        echo json_encode($user);
+    }
 
     /**
      * Set session data
@@ -193,8 +344,53 @@ class SSOServer extends Server
         return $this->cache->get($key, null);
     }
 
+    /**
+     * An error occured.
+     *
+     * @param string $message
+     * @param int $http_status
+     * @throws SSOServerException
+     */
+    protected function fail($message, $http_status = 500)
+    {
+        if (!empty($this->options['fail_exception'])) {
+            throw new SSOServerException($message, $http_status);
+        }
 
+        if ($http_status === 500) trigger_error($message, E_USER_WARNING);
 
+        if ($this->returnType === 'jsonp') {
+            echo $_REQUEST['callback'] . "(" . json_encode(['error' => $message]) . ", $http_status);";
+            exit();
+        }
+
+        if ($this->returnType === 'redirect') {
+            $url = $_REQUEST['return_url'] . '?sso_error=' . $message;
+            header("Location: $url", true, 307);
+            echo "You're being redirected to <a href='{$url}'>$url</a>";
+            exit();
+        }
+
+        http_response_code($http_status);
+        header('Content-type: application/json; charset=UTF-8');
+
+        echo json_encode(['error' => $message]);
+        exit();
+    }
+
+    /**
+     * Authenticate using user credentials
+     *
+     * @implement
+     * @param string $account
+     * @param string $password
+     * @return ValidationResult
+     */
+    protected function authenticate($account, $password)
+    {
+        return $this->app['MyController\SSOServer\Contracts\UserAuthContract']
+            ->authenticate($account, $password);
+    }
 
     /**
      * Get the API secret of a broker and other info
@@ -210,20 +406,6 @@ class SSOServer extends Server
         }
 
         return isset($this->brokers[$brokerId]) ? $this->brokers[$brokerId] : null;
-    }
-
-    /**
-     * Authenticate using user credentials
-     *
-     * @implement
-     * @param string $account
-     * @param string $password
-     * @return ValidationResult
-     */
-    protected function authenticate($account, $password)
-    {
-        return $this->app['MyController\SSOServer\Contracts\UserAuthContract']
-            ->authenticate($account, $password);
     }
 
     /**
