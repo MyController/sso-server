@@ -104,7 +104,6 @@ class SSOServer
 
     /**
      * Start the session for broker requests to the SSO server
-     *
      */
     public function startBrokerSession()
     {
@@ -153,11 +152,10 @@ class SSOServer
 
     /**
      * Start the session when a user visits the SSO server
-     * @override
      */
     protected function startUserSession()
     {
-        // 使用 Lumen的SESSION方案 代替 PHP的原生SESSION方案, 这样才能支持分布式运行
+        // 使用 Lumen的SESSION方案 支持分布式运行
         /*
         |----------------------------------------------------------------------
         |   启用 Lumen的SESSION 需要在 `/bootstrap/app.php` 里开启
@@ -172,6 +170,14 @@ class SSOServer
         |----------------------------------------------------------------------
         |
         */
+
+        $linkedId = session()->getId();
+
+        if (!$linkedId) {
+            return $this->fail("No user session specified", 500);
+        }
+
+        $this->linkedId = $linkedId;
     }
 
     /**
@@ -225,7 +231,6 @@ class SSOServer
 
     /**
      * Attach a user session to a broker session
-     *
      */
     public function attach()
     {
@@ -245,7 +250,7 @@ class SSOServer
         $this->startUserSession();
         $sid = $this->generateSessionId($_REQUEST['broker'], $_REQUEST['token']);
 
-        $this->cache->put($sid, session()->getId(), $this->cacheLifeTime);
+        $this->cache->put($sid, $this->linkedId, $this->cacheLifeTime);
         $this->outputAttachSuccess();
     }
 
