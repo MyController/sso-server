@@ -22,6 +22,28 @@ class SSOServer
     protected $app;
 
     /**
+     * @var array
+     */
+    protected $options;
+
+    /**
+     * Cache that stores the special session data for the brokers.
+     *
+     * @var \Illuminate\Contracts\Cache\Store
+     */
+    protected $cache;
+
+    /**
+     * @var string
+     */
+    protected $returnType;
+
+    /**
+     * @var mixed
+     */
+    protected $brokerId;
+
+    /**
      * Registered brokers
      *
      * @var array
