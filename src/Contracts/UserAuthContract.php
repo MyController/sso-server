@@ -2,7 +2,7 @@
 
 namespace MyController\SSOServer\Contracts;
 
-use Jasny\ValidationResult;
+use MyController\SSOServer\ValidationResult;
 
  /*
  |-------------------------------------------------------------

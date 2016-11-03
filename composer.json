@@ -14,9 +14,7 @@
         "illuminate/http": "5.1.*",
         "illuminate/routing": "5.1.*",
         "illuminate/session": "5.1.*",
-        "illuminate/support": "5.1.*",
-        "jasny/validation-result": "^1.0.0",
-        "jasny/sso": "0.2.*"
+        "illuminate/support": "5.1.*"
     },
     "require-dev": {
         "mockery/mockery": "~0.9",

@@ -3,10 +3,16 @@
 namespace MyController\SSOServer;
 
 use MyController\SSOServer\ValidationResult;
-use Jasny\SSO\Server;
 use MyController\SSOServer\Exceptions\SSOServerException;
 
-class SSOServer extends Server
+/**
+ * Class SSOServer for Lumen
+ *
+ * PS: Based on https://github.com/jasny/sso
+ *
+ * @package MyController\SSOServer
+ */
+class SSOServer
 {
     /**
      * The application instance.
@@ -39,7 +45,6 @@ class SSOServer extends Server
     /**
      * SSOServer constructor.
      *
-     * @override
      * @param \Illuminate\Foundation\Application $app
      */
     public function __construct($app)
@@ -67,7 +72,6 @@ class SSOServer extends Server
     /**
      * Create a cache to store the broker session id.
      *
-     * @override
      */
     protected function createCacheAdapter()
     {
@@ -79,7 +83,6 @@ class SSOServer extends Server
     /**
      * Start the session for broker requests to the SSO server
      *
-     * @override
      */
     public function startBrokerSession()
     {
@@ -201,7 +204,6 @@ class SSOServer extends Server
     /**
      * Attach a user session to a broker session
      *
-     * @override
      */
     public function attach()
     {
@@ -278,7 +280,7 @@ class SSOServer extends Server
             return $this->fail($validation->getError(), 400);
         }
 
-        $this->setSessionData('sso_user', $_POST['username']);
+        $this->setSessionData('sso_user', $validation->getAccount());
         $this->userInfo();
     }
 
@@ -302,10 +304,10 @@ class SSOServer extends Server
         $this->startBrokerSession();
         $user = null;
 
-        $username = $this->getSessionData('sso_user');
+        $account = $this->getSessionData('sso_user');
 
-        if ($username) {
-            $user = $this->getUserInfo($username);
+        if ($account) {
+            $user = $this->getUserInfo($account);
             if (!$user) return $this->fail("User not found", 500); // Shouldn't happen
         }
 

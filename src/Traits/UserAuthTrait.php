@@ -29,43 +29,31 @@ trait UserAuthTrait
     /**
      * Authenticate using user credentials
      *
-     * @param string $account
+     * @param mixed $account
      * @param string $password
      * @return ValidationResult
      */
     public function authenticate($account, $password)
     {
         if (!isset($account)) {
-            return ValidationResult::error("account isn't set")->setReturnData([
-                'account' => $account,
-                'uid' => $account,
-            ]);
+            return ValidationResult::error("account isn't set");
         }
 
         if (!isset($password)) {
-            return ValidationResult::error("password isn't set")->setReturnData([
-                'account' => $account,
-                'uid' => $account,
-            ]);
+            return ValidationResult::error("password isn't set");
         }
 
         if (!isset(self::$users[$account]) || !password_verify($password, self::$users[$account]['password'])) {
-            return ValidationResult::error("Invalid credentials")->setReturnData([
-                'account' => $account,
-                'uid' => $account,
-            ]);
+            return ValidationResult::error("Invalid credentials");
         }
 
-        return ValidationResult::success()->setReturnData([
-            'account' => $account,
-            'uid' => $account,
-        ]);
+        return ValidationResult::success()->setAccount($account);
     }
 
     /**
      * Get the user information
      *
-     * @param string $account
+     * @param mixed $account
      * @return array | null
      */
     public function getUserInfo($account)
